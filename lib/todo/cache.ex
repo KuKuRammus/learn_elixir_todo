@@ -15,6 +15,7 @@ defmodule Todo.Cache do
 
   @impl GenServer
   def init(_) do
+    Todo.Database.start() # Temp: Start the database
     {:ok, %{}} # Store relation between name and server_pid as a map
   end
 
@@ -29,7 +30,7 @@ defmodule Todo.Cache do
       # Not found
       :error ->
         # Start new server with a provided name if not found
-        {:ok, new_server} = Todo.Server.start()
+        {:ok, new_server} = Todo.Server.start(todo_list_name)
 
         # Respond with a newly created server, and update the cache server state
         {

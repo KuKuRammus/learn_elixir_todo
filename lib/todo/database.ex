@@ -42,7 +42,8 @@ defmodule Todo.Database do
   end
 
   # Fetches data from a file
-  def handle_call({:get, key}, state) do
+  @impl GenServer
+  def handle_call({:get, key}, _, state) do
     data = case File.read(file_name(key)) do
       {:ok, contents} -> :erlang.binary_to_term(contents)
       _ -> nil
