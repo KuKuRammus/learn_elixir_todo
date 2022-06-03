@@ -3,6 +3,7 @@ defmodule Todo.Database do
 
   # Compile-time constant (starts with `@`)
   @db_folder "./persist"
+  @worker_count 3
 
   # Interface function: Start server
   def start do
@@ -15,13 +16,23 @@ defmodule Todo.Database do
 
   # Interface function: Stores some data by key
   def store(key, data) do
-    # __MODULE__ used as pid, because server was registered locally during start
-    GenServer.cast(__MODULE__, {:store, key, data})
+    # Fetch worker and delegate cast to it
+    key
+    |> choose_worker()
+    |> Todo.DatabaseWorker.store(key, data)
   end
 
   # Interface function: Fetches value by key
   def get(key) do
-    GenServer.call(__MODULE__, {:get, key})
+    # Fetch worker and delegate call to it
+    key
+    |> choose_worker()
+    |> Todo.DatabaseWorker.get(key)
+  end
+
+  # Interface function: Fetches worker by name
+  defp choose_worker(key) do
+    GenServer.call(__MODULE__, {:choose_worker, key})
   end
 
   @impl GenServer
@@ -29,40 +40,25 @@ defmodule Todo.Database do
     # Make sure folder exists
     File.mkdir_p!(@db_folder)
 
-    # Keep 3 workers in state
-    {:ok, {
-      Todo.DatabaseWorker.start(@db_folder),
-      Todo.DatabaseWorker.start(@db_folder),
-      Todo.DatabaseWorker.start(@db_folder),
-    }}
+    # Keepp map of workers as a state, all read/write operations will be delegated to them
+    {:ok, start_workers()}
   end
 
+  # Fetches worker for a specific key
   @impl GenServer
-  def handle_cast({:store, key, data}, workers) do
-    Todo.DatabaseWorker.store(
-      choose_worker(workers, key),
-      key,
-      data
-    )
-
-    {:noreply, workers}
+  def handle_call({:choose_worker, key}, _, workers) do
+    # Compute key's numerical hash and normalize it to fall in [0, @worker_count - 1]
+    worker_key = :erlang.phash2(key, @worker_count)
+    {:reply, Map.get(workers, worker_key), workers}
   end
 
-  @impl GenServer
-  def handle_call({:get, key}, _, workers) do
-    data = Todo.DatabaseWorker.get(
-      choose_worker(workers, key),
-      key
-    )
-
-    {:reply, data, workers}
-  end
-
-  defp choose_worker(worker_list, name) do
-    # Compute numerical hash from string and normalize to fall in range [0, 2]
-    index = :erlang.phash2(name, 3)
-    {:ok, worker_pid} = elem(worker_list, index)
-    worker_pid
+  # Starts pool of workers
+  defp start_workers() do
+    # This is comprehention which stores results into a map
+    for index <- 1..@worker_count, into: %{} do
+      {:ok, pid} = Todo.DatabaseWorker.start(@db_folder)
+      {index - 1, pid}
+    end
   end
 
 end

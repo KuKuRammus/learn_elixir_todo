@@ -21,7 +21,8 @@ defmodule Todo.DatabaseWorker do
   # Stores data into a file
   @impl GenServer
   def handle_cast({:store, key, data}, db_folder) do
-    file_name(db_folder, key)
+    db_folder
+    |> file_name(key)
     |> File.write!(:erlang.term_to_binary(data))
 
     {:noreply, db_folder}
