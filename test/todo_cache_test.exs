@@ -13,6 +13,7 @@ defmodule TodoCacheTest do
     assert bob_pid == Todo.Cache.server_process(cache, "bob")
   end
 
+  # TODO: Subsequent tests will fail, because test generates side effect, which is not cleared
   test "todo operations" do
     # Create new todo server for alice
     {:ok, cache} = Todo.Cache.start()

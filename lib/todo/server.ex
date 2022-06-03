@@ -31,14 +31,14 @@ defmodule Todo.Server do
     # Persist data
     Todo.Database.store(list_name, new_state)
 
-    {:noreply, new_state} # Casts must return {:noreply, new_state}
+    {:noreply, {list_name, new_state}} # Casts must return {:noreply, new_state}
   end
 
   # Implement handle_call from gen_server (takes: request, caller info(request ID, used internally), current_state)
   @impl GenServer
   def handle_call({:entries, date}, _, {list_name, todo_list}) do
     entries = Todo.List.entries(todo_list, date)
-    {:reply, entries, todo_list} # Calls must return {:reply, response, new_state}
+    {:reply, entries, {list_name, todo_list}} # Calls must return {:reply, response, new_state}
   end
 
 end

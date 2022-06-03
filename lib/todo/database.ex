@@ -28,33 +28,41 @@ defmodule Todo.Database do
   def init(_) do
     # Make sure folder exists
     File.mkdir_p!(@db_folder)
-    {:ok, nil}
+
+    # Keep 3 workers in state
+    {:ok, {
+      Todo.DatabaseWorker.start(@db_folder),
+      Todo.DatabaseWorker.start(@db_folder),
+      Todo.DatabaseWorker.start(@db_folder),
+    }}
   end
 
-  # Stores data into a file
   @impl GenServer
-  def handle_cast({:store, key, data}, state) do
-    key
-    |> file_name()
-    |> File.write!(:erlang.term_to_binary(data)) # TODO: Serialization?
+  def handle_cast({:store, key, data}, workers) do
+    Todo.DatabaseWorker.store(
+      choose_worker(workers, key),
+      key,
+      data
+    )
 
-    {:noreply, state}
+    {:noreply, workers}
   end
 
-  # Fetches data from a file
   @impl GenServer
-  def handle_call({:get, key}, _, state) do
-    data = case File.read(file_name(key)) do
-      {:ok, contents} -> :erlang.binary_to_term(contents)
-      _ -> nil
-    end
+  def handle_call({:get, key}, _, workers) do
+    data = Todo.DatabaseWorker.get(
+      choose_worker(workers, key),
+      key
+    )
 
-    {:reply, data, state}
+    {:reply, data, workers}
   end
 
-  # Generates full file name by given key
-  # Note: Use `defp` to define private function
-  defp file_name(key) do
-    Path.join(@db_folder, to_string(key))
+  defp choose_worker(worker_list, name) do
+    # Compute numerical hash from string and normalize to fall in range [0, 2]
+    index = :erlang.phash2(name, 3)
+    {:ok, worker_pid} = elem(worker_list, index)
+    worker_pid
   end
+
 end
