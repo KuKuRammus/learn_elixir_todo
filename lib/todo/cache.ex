@@ -17,7 +17,6 @@ defmodule Todo.Cache do
 
   @impl GenServer
   def init(_) do
-    Todo.Database.start_link() # Temp: Start the database
     {:ok, %{}} # Store relation between name and server_pid as a map
   end
 

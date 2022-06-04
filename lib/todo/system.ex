@@ -14,7 +14,11 @@ defmodule Todo.System do
     # See blocks in tests to check how supervisor child specification can be configured
     # NOTE: Processes are not restarted indefinetely. There is a default restart freq. - 3 times in 5 sec.
     Supervisor.init(
-      [Todo.Cache],
+      [
+        Todo.ProcessRegistry,
+        Todo.Database,
+        Todo.Cache
+      ],
       strategy: :one_for_one
     )
   end

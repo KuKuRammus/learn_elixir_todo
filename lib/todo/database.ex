@@ -1,18 +1,36 @@
 defmodule Todo.Database do
-  use GenServer
-
   # Compile-time constant (starts with `@`)
   @db_folder "./persist"
-  @worker_count 3
+  @worker_count 5
 
-  # Interface function: Start server
-  def start_link do
-    IO.puts("Starting Todo.Database")
-    GenServer.start_link(
-      __MODULE__,
-      nil,
-      name: __MODULE__ # `name` parameter allows to locally register server under specified name
-    )
+  def start_link() do
+    File.mkdir_p!(@db_folder)
+
+    # Create list of child specification
+    children = Enum.map(1..@worker_count, &worker_spec/1)
+
+    # Start supervisor
+    Supervisor.start_link(children, strategy: :one_for_one)
+  end
+
+  # Provides worker child spec used by the supervisor
+  defp worker_spec(worker_id) do
+    # {module, args}
+    default_worker_spec = {Todo.DatabaseWorker, {@db_folder, worker_id}}
+
+    # Child spec used to generate child spec
+    Supervisor.child_spec(default_worker_spec, id: worker_id)
+  end
+
+  # Because Database is now a supervisor, this function is required to define how this supervisor manages it
+  def child_spec(_) do
+    %{
+      id: __MODULE__,
+      start: {__MODULE__, :start_link, []},
+
+      # Define that this is a supervisor
+      type: :supervisor
+    }
   end
 
   # Interface function: Stores some data by key
@@ -31,35 +49,9 @@ defmodule Todo.Database do
     |> Todo.DatabaseWorker.get(key)
   end
 
-  # Interface function: Fetches worker by name
+  # Fetches worker id by name
   defp choose_worker(key) do
-    GenServer.call(__MODULE__, {:choose_worker, key})
-  end
-
-  @impl GenServer
-  def init(_) do
-    # Make sure folder exists
-    File.mkdir_p!(@db_folder)
-
-    # Keepp map of workers as a state, all read/write operations will be delegated to them
-    {:ok, start_workers()}
-  end
-
-  # Fetches worker for a specific key
-  @impl GenServer
-  def handle_call({:choose_worker, key}, _, workers) do
-    # Compute key's numerical hash and normalize it to fall in [0, @worker_count - 1]
-    worker_key = :erlang.phash2(key, @worker_count)
-    {:reply, Map.get(workers, worker_key), workers}
-  end
-
-  # Starts pool of workers
-  defp start_workers() do
-    # This is comprehention which stores results into a map
-    for index <- 1..@worker_count, into: %{} do
-      {:ok, pid} = Todo.DatabaseWorker.start_link(@db_folder)
-      {index - 1, pid}
-    end
+    :erlang.phash2(key, @worker_count)
   end
 
 end
