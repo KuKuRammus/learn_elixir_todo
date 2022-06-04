@@ -1,11 +1,15 @@
 defmodule Todo.Server do
   # Use gen_server behaviour (behaviours are similar to traits+interface to PHP?)
-  use GenServer
+  use GenServer, restart: :temporary
 
   # Interface function: start server
-  def start_link(list_name) do
-    IO.puts("Starting Todo.Server")
-    GenServer.start_link(__MODULE__, list_name) # __MODULE__ will automatically transform to current module name
+  def start_link(name) do
+    # Start server and register it into registry
+    GenServer.start_link(__MODULE__, name, name: via_tuple(name))
+  end
+
+  defp via_tuple(name) do
+    Todo.ProcessRegistry.via_tuple({__MODULE__, name})
   end
 
   # Interface function: add new entry
@@ -21,6 +25,7 @@ defmodule Todo.Server do
   # Implement init from gen_server (argument can be used to get data while starting server)
   @impl GenServer
   def init(list_name) do
+    IO.puts("Starting Todo.Server - #{list_name}")
     {:ok, {list_name, Todo.Database.get(list_name) || Todo.List.new()}} # Try to fetch from database with fallback
   end
 
