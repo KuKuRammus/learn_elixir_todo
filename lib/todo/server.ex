@@ -3,8 +3,9 @@ defmodule Todo.Server do
   use GenServer
 
   # Interface function: start server
-  def start(list_name) do
-    GenServer.start(__MODULE__, list_name) # __MODULE__ will automatically transform to current module name
+  def start_link(list_name) do
+    IO.puts("Starting Todo.Server")
+    GenServer.start_link(__MODULE__, list_name) # __MODULE__ will automatically transform to current module name
   end
 
   # Interface function: add new entry

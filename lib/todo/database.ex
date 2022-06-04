@@ -6,8 +6,9 @@ defmodule Todo.Database do
   @worker_count 3
 
   # Interface function: Start server
-  def start do
-    GenServer.start(
+  def start_link do
+    IO.puts("Starting Todo.Database")
+    GenServer.start_link(
       __MODULE__,
       nil,
       name: __MODULE__ # `name` parameter allows to locally register server under specified name
@@ -56,7 +57,7 @@ defmodule Todo.Database do
   defp start_workers() do
     # This is comprehention which stores results into a map
     for index <- 1..@worker_count, into: %{} do
-      {:ok, pid} = Todo.DatabaseWorker.start(@db_folder)
+      {:ok, pid} = Todo.DatabaseWorker.start_link(@db_folder)
       {index - 1, pid}
     end
   end
