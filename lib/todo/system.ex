@@ -15,6 +15,7 @@ defmodule Todo.System do
     # NOTE: Processes are not restarted indefinetely. There is a default restart freq. - 3 times in 5 sec.
     Supervisor.init(
       [
+        Todo.Metrics,
         Todo.ProcessRegistry,
         Todo.Database,
         Todo.Cache
