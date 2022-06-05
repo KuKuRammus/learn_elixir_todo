@@ -1,4 +1,5 @@
 # Note: This is an example how todo server can be represented as an agent
+# Note: It is better to start with GenServer first, and then downgrade if needed
 defmodule Todo.ServerAgent do
   # Use agent behaviour (behaviours are similar to traits+interface to PHP?)
   # Note: always wrap agent in a module, because state is exposed, unlike gen server, where only defined messages are
