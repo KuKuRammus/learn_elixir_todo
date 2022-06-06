@@ -53,7 +53,7 @@ defmodule Todo.Web do
     Plug.Adapters.Cowboy.child_spec(
       scheme: :http, # Server over http
       options: [ # Options
-        port: 5454,
+        port: Application.fetch_env!(:todo, :http_port), # Fetch env variable from config/config.exs
       ],
       plug: __MODULE__ # Some functions from this module will be invoked to handle the request
     )
